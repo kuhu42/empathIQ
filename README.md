@@ -1,2 +1,3 @@
 # empathIQ
-we are empathetic people
+egg: we are empathetic people
+snorlax: no
