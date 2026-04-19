@@ -2,10 +2,25 @@
 
 This thing kind of works, but I don't like it.
 
-## To run
+## Get the project
+
+1. Clone the repo
 
 ```bash
+git clone https://github.com/kuhu42/empathIQ.git empath-iq
 cd empath-iq
+```
+
+2. Switch branches
+
+```bash
+git checkout dev
+```
+
+3. Pull latest changes
+
+```bash
+git pull origin dev
 ```
 
 ## Please use uv
