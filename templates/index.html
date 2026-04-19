@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Behavior Predictor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080a0e;
+    --surface: #0e1117;
+    --border: #1c2030;
+    --accent: #00ff88;
+    --accent2: #00b8ff;
+    --warn: #ffcc00;
+    --text: #e0e6f0;
+    --muted: #4a5568;
+    --card: #111520;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr;
+  }
+
+  header {
+    padding: 18px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  header h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+
+  .fps-badge {
+    margin-left: auto;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  main {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 0;
+    height: calc(100vh - 57px);
+  }
+
+  /* Camera panel */
+  .camera-panel {
+    position: relative;
+    background: #000;
+    overflow: hidden;
+    border-right: 1px solid var(--border);
+  }
+
+  #feed {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    filter: brightness(0.95) contrast(1.05);
+  }
+
+  .feed-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to right, transparent 60%, rgba(8,10,14,0.3));
+    pointer-events: none;
+  }
+
+  /* Corner brackets */
+  .bracket {
+    position: absolute;
+    width: 24px; height: 24px;
+    border-color: var(--accent);
+    border-style: solid;
+    opacity: 0.6;
+  }
+  .bracket.tl { top: 16px; left: 16px; border-width: 2px 0 0 2px; }
+  .bracket.tr { top: 16px; right: 16px; border-width: 2px 2px 0 0; }
+  .bracket.bl { bottom: 16px; left: 16px; border-width: 0 0 2px 2px; }
+  .bracket.br { bottom: 16px; right: 16px; border-width: 0 2px 2px 0; }
+
+  /* Sidebar */
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    overflow-y: auto;
+    background: var(--surface);
+  }
+
+  .section {
+    padding: 20px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+
+  /* Behavior card */
+  .behavior-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .behavior-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    border-radius: 2px 0 0 2px;
+  }
+
+  .behavior-name {
+    font-size: 17px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 4px;
+    line-height: 1.3;
+  }
+
+  .behavior-detail {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .confidence-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .confidence-bar {
+    flex: 1;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .confidence-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.5s ease;
+    box-shadow: 0 0 6px var(--accent);
+  }
+
+  .confidence-pct {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    min-width: 36px;
+    text-align: right;
+  }
+
+  /* Emotion */
+  .emotion-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .emotion-name {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--text);
+    width: 72px;
+    flex-shrink: 0;
+    text-transform: capitalize;
+  }
+
+  .emo-bar {
+    flex: 1;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .emo-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+
+  .emo-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    min-width: 34px;
+    text-align: right;
+  }
+
+  .dominant-badge {
+    display: inline-block;
+    margin-left: 4px;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    vertical-align: middle;
+    box-shadow: 0 0 6px var(--accent);
+  }
+
+  /* Posture */
+  .posture-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--accent2);
+    margin-bottom: 12px;
+  }
+
+  .posture-tag::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent2);
+    box-shadow: 0 0 6px var(--accent2);
+  }
+
+  /* Feature grid */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .feature-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px;
+  }
+
+  .feature-key {
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 3px;
+    text-transform: capitalize;
+    letter-spacing: 0.03em;
+  }
+
+  .feature-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    color: var(--text);
+  }
+
+  /* History */
+  .history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .history-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    background: var(--card);
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted);
+    animation: slideIn 0.3s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(10px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .history-time {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--border);
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  .emo-colors {
+    happy: #00ff88;
+    sad: #4488ff;
+    angry: #ff4444;
+    fear: #ff8800;
+    surprise: #ffcc00;
+    disgust: #aa44ff;
+    neutral: #888888;
+  }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-dot"></div>
+  <h1>Behavior Predictor</h1>
+  <span class="fps-badge" id="fps">-- fps</span>
+</header>
+
+<main>
+  <div class="camera-panel">
+    <img id="feed" src="/video_feed" alt="Camera Feed">
+    <div class="feed-overlay"></div>
+    <div class="bracket tl"></div>
+    <div class="bracket tr"></div>
+    <div class="bracket bl"></div>
+    <div class="bracket br"></div>
+  </div>
+
+  <div class="sidebar">
+
+    <!-- Behavior -->
+    <div class="section">
+      <div class="section-label">Predicted Behavior</div>
+      <div class="behavior-card">
+        <div class="behavior-name" id="behavior-name">Initializing…</div>
+        <div class="behavior-detail" id="behavior-detail">Starting camera</div>
+        <div class="confidence-bar-wrap">
+          <div class="confidence-bar">
+            <div class="confidence-fill" id="conf-fill" style="width:0%"></div>
+          </div>
+          <span class="confidence-pct" id="conf-pct">0%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Emotion -->
+    <div class="section">
+      <div class="section-label">Emotion Analysis</div>
+      <div id="emotion-bars"></div>
+    </div>
+
+    <!-- Posture -->
+    <div class="section">
+      <div class="section-label">Posture</div>
+      <div class="posture-tag" id="posture-tag">detecting…</div>
+      <div class="feature-grid" id="feature-grid"></div>
+    </div>
+
+    <!-- History -->
+    <div class="section">
+      <div class="section-label">Recent Behaviors</div>
+      <div class="history-list" id="history"></div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+const EMOTION_COLORS = {
+  happy: '#00ff88', sad: '#4488ff', angry: '#ff4455',
+  fear: '#ff8800', surprise: '#ffcc00', disgust: '#aa44ff', neutral: '#666677'
+};
+
+let lastBehavior = null;
+const behaviorHistory = [];
+
+function formatKey(k) {
+  return k.replace(/_/g, ' ');
+}
+
+async function poll() {
+  try {
+    const res = await fetch('/state');
+    const d = await res.json();
+
+    // FPS
+    document.getElementById('fps').textContent = `${d.fps} fps`;
+
+    // Behavior
+    document.getElementById('behavior-name').textContent = d.behavior;
+    document.getElementById('behavior-detail').textContent = d.behavior_detail || '—';
+    const pct = Math.round(d.behavior_confidence * 100);
+    document.getElementById('conf-fill').style.width = pct + '%';
+    document.getElementById('conf-pct').textContent = pct + '%';
+
+    // History
+    if (d.behavior !== lastBehavior && d.behavior !== 'Observing...' && d.behavior !== 'unknown') {
+      lastBehavior = d.behavior;
+      const now = new Date();
+      const t = now.toTimeString().slice(0, 5);
+      behaviorHistory.unshift({ label: d.behavior, time: t });
+      if (behaviorHistory.length > 5) behaviorHistory.pop();
+      const hist = document.getElementById('history');
+      hist.innerHTML = behaviorHistory.map(h =>
+        `<div class="history-item"><span>${h.label}</span><span class="history-time">${h.time}</span></div>`
+      ).join('');
+    }
+
+    // Emotion bars
+    if (Object.keys(d.emotion_scores).length > 0) {
+      const bars = document.getElementById('emotion-bars');
+      const sorted = Object.entries(d.emotion_scores).sort((a, b) => b[1] - a[1]);
+      bars.innerHTML = sorted.map(([emo, val]) => {
+        const color = EMOTION_COLORS[emo] || '#888';
+        const isDom = emo === d.emotion;
+        return `<div class="emotion-row">
+          <span class="emotion-name">${emo}${isDom ? '<span class="dominant-badge"></span>' : ''}</span>
+          <div class="emo-bar">
+            <div class="emo-fill" style="width:${val}%;background:${color};${isDom ? 'box-shadow:0 0 6px '+color : ''}"></div>
+          </div>
+          <span class="emo-val">${val.toFixed(0)}%</span>
+        </div>`;
+      }).join('');
+    }
+
+    // Posture
+    document.getElementById('posture-tag').textContent = d.posture.replace(/_/g, ' ');
+
+    // Features
+    if (Object.keys(d.posture_features).length > 0) {
+      const grid = document.getElementById('feature-grid');
+      grid.innerHTML = Object.entries(d.posture_features).map(([k, v]) =>
+        `<div class="feature-item">
+          <div class="feature-key">${formatKey(k)}</div>
+          <div class="feature-val">${parseFloat(v).toFixed(3)}</div>
+        </div>`
+      ).join('');
+    }
+
+  } catch(e) { /* ignore */ }
+
+  setTimeout(poll, 300);
+}
+
+poll();
+</script>
+</body>
+</html>
